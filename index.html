@@ -104,6 +104,38 @@
   }
   .brand h1 { margin: 0; }
 
+  .social {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 2;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 1px 2px var(--shadow);
+    color: var(--fg);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+    opacity: 0;
+    animation: rise 0.7s ease-out 0.1s forwards;
+  }
+  .social svg { width: 20px; height: 20px; }
+  .social:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px var(--shadow);
+    color: var(--accent-2);
+  }
+  @media (max-width: 560px) {
+    .social { top: 1rem; right: 1rem; width: 36px; height: 36px; }
+    .social svg { width: 17px; height: 17px; }
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -214,6 +246,14 @@
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
   <div class="blob blob-3"></div>
+
+  <a class="social" href="https://www.instagram.com/manuel_does_things" target="_blank" rel="noopener" aria-label="Instagram">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>
+    </svg>
+  </a>
 
   <main>
     <header>
