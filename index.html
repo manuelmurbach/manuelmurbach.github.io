@@ -13,7 +13,6 @@
     --muted: #6b6676;
     --tile-bg: rgba(255, 255, 255, 0.6);
     --tile-border: rgba(23, 21, 31, 0.08);
-    --chrome-bg: rgba(23, 21, 31, 0.04);
     --shadow: rgba(23, 21, 31, 0.12);
     --accent-1: #ff8a5c;
     --accent-2: #6a4cff;
@@ -26,7 +25,6 @@
       --muted: #a49fb3;
       --tile-bg: rgba(255, 255, 255, 0.05);
       --tile-border: rgba(255, 255, 255, 0.09);
-      --chrome-bg: rgba(255, 255, 255, 0.04);
       --shadow: rgba(0, 0, 0, 0.5);
       --accent-1: #ff9d76;
       --accent-2: #8b78ff;
@@ -70,7 +68,7 @@
   header { margin-bottom: 2.75rem; }
   h1 {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: clamp(2.1rem, 5.5vw, 2.75rem);
+    font-size: clamp(1.55rem, 6.2vw, 2.75rem);
     font-weight: 800;
     margin: 0 0 0.75rem;
     letter-spacing: -0.02em;
@@ -112,7 +110,11 @@
     gap: 1.1rem;
   }
   @media (max-width: 560px) {
-    .grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr; gap: 0.85rem; }
+    main { padding: 4rem 1.25rem 3rem; }
+    header { margin-bottom: 1.75rem; }
+    .brand-icon { width: 40px; height: 40px; font-size: 1.25rem; }
+    .tile-body { padding: 0.75rem 0.9rem 0.9rem; }
   }
 
   .tile {
@@ -140,30 +142,9 @@
     border-color: var(--tile-border);
   }
 
-  .chrome {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 0.65rem;
-    background: var(--chrome-bg);
-  }
-  .chrome .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: 0.35; }
-  .chrome .url {
-    margin-left: 0.35rem;
-    font-size: 0.66rem;
-    color: var(--muted);
-    background: var(--tile-bg);
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-  }
-
   .preview {
     position: relative;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
   }
   .preview img {
@@ -244,10 +225,6 @@
 
     <div class="grid">
       <a class="tile" href="https://manuelmurbach.github.io/visible-from/" target="_blank" rel="noopener">
-        <div class="chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">visible-from</span>
-        </div>
         <div class="preview">
           <img src="assets/preview-visible-from.jpg" alt="Visible From app screenshot">
         </div>
@@ -281,10 +258,6 @@
       </a>
 
       <a class="tile" href="https://manuelmurbach.github.io/places-i-walked/" target="_blank" rel="noopener">
-        <div class="chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">places-i-walked</span>
-        </div>
         <div class="preview">
           <img src="assets/preview-places-i-walked.jpg" alt="Places I've Walked app screenshot">
         </div>
@@ -312,10 +285,6 @@
       </a>
 
       <a class="tile" href="https://map.geo.admin.ch/index.html#/map?lang=de&center=2663250.8,1204749.94&z=2&topic=ech&layers=ch.bazl.luftfahrtkarten-icao,f;ch.swisstopo-karto.skitouren,f;ch.swisstopo.swissimage-product@year=current,f;ch.swisstopo.swisstlm3d-wanderwege,f,1;ch.swisstopo.hangneigung-ueber_30,f,0.75;ch.bafu.wrz-wildruhezonen_portal;ch.bafu.wrz-jagdbanngebiete_select;ch.bafu.schutzgebiete-aulav_auen;ch.bafu.bundesinventare-hochmoore;ch.bafu.bundesinventare-flachmoore;ch.bafu.alpweiden-herdenschutzhunde;ch.pronatura.naturschutzgebiete&bgLayer=ch.swisstopo.pixelkarte-farbe&catalogNodes=457,532,687,458,477,485,491,508,510,517,527,599,614" target="_blank" rel="noopener">
-        <div class="chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">map.geo.admin.ch</span>
-        </div>
         <div class="preview">
           <img src="assets/preview-swissmap.jpg" alt="SwissMap protected areas screenshot">
         </div>
@@ -337,10 +306,6 @@
       </a>
 
       <a class="tile" href="https://manuelmurbach.github.io/dmc-scanner/" target="_blank" rel="noopener">
-        <div class="chrome">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">dmc-scanner</span>
-        </div>
         <div class="preview">
           <img src="assets/preview-dmc-scanner.jpg" alt="DMC Scanner app screenshot">
         </div>
