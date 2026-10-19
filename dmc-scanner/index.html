@@ -9,13 +9,41 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DMC Scanner">
-    <meta name="theme-color" content="#6a3fd6">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='lg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23b18aff'/%3E%3Cstop offset='100%25' stop-color='%236a3fd6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23lg)'/%3E%3Cpath d='M6 12V9a3 3 0 0 1 3-3h3M23 6h3a3 3 0 0 1 3 3v3M29 20v3a3 3 0 0 1-3 3h-3M9 26H6a3 3 0 0 1-3-3v-3' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round'/%3E%3Cline x1='6' y1='16' x2='29' y2='16' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+    <meta name="theme-color" content="#17151f">
+    <link rel="icon" type="image/svg+xml" href="/icons/dmc-scanner.svg">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
             --panel-offset: 0px;
+            --bg: #f6f3ee;
+            --panel: #fdfcf9;
+            --fill: #f1eee8;
+            --border: #e2ddd3;
+            --fg: #17151f;
+            --text: #3d3947;
+            --muted: #6b6676;
+            --faint: #9d98a8;
+            --accent: #534AB7;
+            --accent-hover: #3C3489;
+            --accent-soft: #EEEDFE;
+            --ok: #3B6D11;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #100e17;
+                --panel: #1a1823;
+                --fill: #262330;
+                --border: #34303f;
+                --fg: #f3f1f8;
+                --text: #d8d4e2;
+                --muted: #a49fb3;
+                --faint: #7d788b;
+                --accent: #7F77DD;
+                --accent-hover: #AFA9EC;
+                --accent-soft: #26215C;
+                --ok: #639922;
+            }
         }
 
         body {
@@ -23,7 +51,7 @@
             height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 14px;
-            background: #111;
+            background: #17151f;
         }
 
         /* ── Main / scanner area ── */
@@ -67,8 +95,8 @@
         #panel {
             width: 240px;
             min-width: 240px;
-            background: #fff;
-            border-left: 1px solid #d1d5db;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -99,29 +127,29 @@
             font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.02em;
-            color: #111;
+            color: var(--fg);
             line-height: 1.15;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        #panel-chevron { display: none; width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.25s ease; }
+        #panel-chevron { color: var(--faint); display: none; width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.25s ease; }
 
         .section { display: flex; flex-direction: column; gap: 8px; }
 
         .field-label {
             font-size: 11px;
             font-weight: 600;
-            color: #6b7280;
+            color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
 
         #status {
             font-size: 13px;
-            color: #374151;
-            background: #f3f4f6;
+            color: var(--text);
+            background: var(--fill);
             border-radius: 6px;
             padding: 8px 10px;
             min-height: 18px;
@@ -133,8 +161,8 @@
             font-size: 14px;
             font-weight: 700;
             word-break: break-all;
-            color: #111;
-            background: #f3f4f6;
+            color: var(--fg);
+            background: var(--fill);
             border-radius: 6px;
             padding: 8px 10px;
         }
@@ -149,17 +177,17 @@
             cursor: pointer;
             transition: background 0.15s, opacity 0.15s;
         }
-        .btn-primary { background: #7c3aed; color: #fff; }
-        .btn-primary:hover { background: #6d28d9; }
-        .btn-primary.copied { background: #16a34a; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary.copied { background: var(--ok); }
         .btn-outline {
             background: transparent;
-            color: #7c3aed;
-            border: 1px solid #7c3aed;
+            color: var(--accent);
+            border: 1px solid var(--accent);
         }
-        .btn-outline:hover { background: #f5f3ff; }
+        .btn-outline:hover { background: var(--accent-soft); }
 
-        #footer a { color: #7c3aed; font-weight: 600; text-decoration: none; }
+        #footer a { color: var(--accent); font-weight: 600; text-decoration: none; }
 
         #footer {
             margin-top: auto;
@@ -167,7 +195,7 @@
             flex-direction: column;
             gap: 8px;
             font-size: 11px;
-            color: #9ca3af;
+            color: var(--faint);
             line-height: 1.4;
         }
 
@@ -216,21 +244,11 @@
     <div id="panel" class="open">
         <div id="panel-header" onclick="togglePanel()">
             <div class="brand">
-                <svg width="34" height="34" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <defs>
-                        <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#b18aff"/>
-                            <stop offset="100%" stop-color="#6a3fd6"/>
-                        </linearGradient>
-                    </defs>
-                    <rect width="32" height="32" rx="9" fill="url(#logoBg)"/>
-                    <path d="M6 12V9a3 3 0 0 1 3-3h3M23 6h3a3 3 0 0 1 3 3v3M29 20v3a3 3 0 0 1-3 3h-3M9 26H6a3 3 0 0 1-3-3v-3" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-                    <line x1="6" y1="16" x2="29" y2="16" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-                </svg>
+                <img src="/icons/dmc-scanner.svg" width="34" height="34" alt="">
                 <h1>DMC Scanner</h1>
             </div>
             <svg id="panel-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M6 15l6-6 6 6" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </div>
 

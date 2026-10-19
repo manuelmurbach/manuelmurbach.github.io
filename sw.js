@@ -3,7 +3,7 @@
 // Strategy: network first (so updates show up as soon as you're online),
 // falling back to the cached copy when offline or the network is too slow.
 
-const CACHE = 'nolo-offline-v1';
+const CACHE = 'nolo-offline-v2';
 const NETWORK_TIMEOUT_MS = 3000;
 
 // Only these paths are handled; everything else (Visible From, Places I've
@@ -16,6 +16,12 @@ const PRECACHE = [
   '/assets/preview-visible-from.jpg',
   '/assets/preview-places-i-walked.jpg',
   '/assets/preview-swissmap.jpg',
+  '/icons/nolo.svg',
+  '/icons/dmc-scanner.svg',
+  '/icons/speedometer.svg',
+  '/icons/visible-from.svg',
+  '/icons/places-i-walked.svg',
+  '/icons/swissmap.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/speedometer/',
