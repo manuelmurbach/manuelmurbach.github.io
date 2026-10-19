@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DMC Scanner</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DMC Scanner">
+    <meta name="theme-color" content="#6a3fd6">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='lg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23b18aff'/%3E%3Cstop offset='100%25' stop-color='%236a3fd6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23lg)'/%3E%3Cpath d='M6 12V9a3 3 0 0 1 3-3h3M23 6h3a3 3 0 0 1 3 3v3M29 20v3a3 3 0 0 1-3 3h-3M9 26H6a3 3 0 0 1-3-3v-3' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round'/%3E%3Cline x1='6' y1='16' x2='29' y2='16' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --panel-offset: 0px;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            background: #111;
+        }
+
+        /* ── Main / scanner area ── */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-width: 0;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #video {
+            width: 100%;
+            display: block;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 160px;
+            height: 160px;
+            border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        /* ── Side panel — matches "visible-from" / "places-i-walked" ── */
+        #panel {
+            width: 240px;
+            min-width: 240px;
+            background: #fff;
+            border-left: 1px solid #d1d5db;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 16px 14px;
+            flex-shrink: 0;
+            cursor: default;
+        }
+
+        #panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 0 14px 16px;
+            overflow-y: auto;
+        }
+
+        .brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .brand svg { flex-shrink: 0; }
+        .brand h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #111;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #panel-chevron { display: none; width: 20px; height: 20px; flex-shrink: 0; transition: transform 0.25s ease; }
+
+        .section { display: flex; flex-direction: column; gap: 8px; }
+
+        .field-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        #status {
+            font-size: 13px;
+            color: #374151;
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 8px 10px;
+            min-height: 18px;
+        }
+
+        #result-box { display: none; }
+
+        #result-text {
+            font-size: 14px;
+            font-weight: 700;
+            word-break: break-all;
+            color: #111;
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .btn-primary { background: #7c3aed; color: #fff; }
+        .btn-primary:hover { background: #6d28d9; }
+        .btn-primary.copied { background: #16a34a; }
+        .btn-outline {
+            background: transparent;
+            color: #7c3aed;
+            border: 1px solid #7c3aed;
+        }
+        .btn-outline:hover { background: #f5f3ff; }
+
+        #footer a { color: #7c3aed; font-weight: 600; text-decoration: none; }
+
+        #footer {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 11px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        /* On phones the app is used one-handed: the panel becomes a low bar
+           rising from the bottom, full width, showing just the header until
+           tapped open. */
+        @media (max-width: 700px) {
+            #main {
+                padding-bottom: var(--panel-offset);
+                transition: padding-bottom 0.25s ease;
+            }
+
+            #panel {
+                position: fixed;
+                top: auto;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                height: 40vh;
+                max-height: 40vh;
+                width: 100%;
+                min-width: 0;
+                z-index: 1500;
+                border-left: none;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -2px 14px rgba(0,0,0,0.3);
+                transform: translateY(calc(100% - 70px));
+                transition: transform 0.25s ease;
+            }
+            #panel.open { transform: translateY(0); }
+            #panel-header { height: 70px; box-sizing: border-box; cursor: pointer; }
+            #panel-chevron { display: block; }
+            #panel.open #panel-chevron { transform: rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main">
+        <div id="video-container">
+            <video id="video" autoplay playsinline muted></video>
+            <div id="crosshair"></div>
+        </div>
+    </div>
+
+    <div id="panel" class="open">
+        <div id="panel-header" onclick="togglePanel()">
+            <div class="brand">
+                <svg width="34" height="34" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#b18aff"/>
+                            <stop offset="100%" stop-color="#6a3fd6"/>
+                        </linearGradient>
+                    </defs>
+                    <rect width="32" height="32" rx="9" fill="url(#logoBg)"/>
+                    <path d="M6 12V9a3 3 0 0 1 3-3h3M23 6h3a3 3 0 0 1 3 3v3M29 20v3a3 3 0 0 1-3 3h-3M9 26H6a3 3 0 0 1-3-3v-3" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+                    <line x1="6" y1="16" x2="29" y2="16" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+                </svg>
+                <h1>DMC Scanner</h1>
+            </div>
+            <svg id="panel-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M6 15l6-6 6 6" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <div id="panel-body">
+            <div class="section">
+                <div id="status">Starting camera…</div>
+            </div>
+
+            <div class="section" id="result-box">
+                <div id="result-text"></div>
+                <button id="copy-btn" class="btn btn-primary">Copy to Clipboard</button>
+                <button id="scan-again-btn" class="btn btn-outline">Scan Again</button>
+            </div>
+
+            <div id="footer">
+                <a href="/">← All apps</a>
+                <span>Runs entirely in your browser, also offline. No data leaves your device.</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/zxing-0.20.0.min.js"></script>
+    <script>
+        const video       = document.getElementById('video');
+        const status      = document.getElementById('status');
+        const resultBox   = document.getElementById('result-box');
+        const resultText  = document.getElementById('result-text');
+        const copyBtn     = document.getElementById('copy-btn');
+        const scanAgainBtn = document.getElementById('scan-again-btn');
+        const panel       = document.getElementById('panel');
+
+        function togglePanel() {
+            panel.classList.toggle('open');
+            syncMainOffset();
+        }
+
+        // Keeps the camera view centered in whatever space the panel
+        // isn't covering, so the crosshair lines up with what's actually visible.
+        function syncMainOffset() {
+            // +20px cancels out #main's own top padding, so the video
+            // centers in the visible area above the panel, not the full viewport.
+            const offset = panel.classList.contains('open') ? 'calc(40vh + 20px)' : '90px';
+            document.documentElement.style.setProperty('--panel-offset', offset);
+        }
+
+        syncMainOffset();
+
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.DATA_MATRIX]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+        const reader = new ZXing.BrowserMultiFormatReader(hints);
+        let scanning = true;
+
+        function startScanner() {
+            scanning = true;
+            resultBox.style.display = 'none';
+            status.textContent = 'Point camera at a Data Matrix code…';
+
+            reader.decodeFromConstraints(
+                { video: { facingMode: 'environment' } },
+                video,
+                (result, err) => {
+                    if (!scanning) return;
+                    if (result) {
+                        scanning = false;
+                        reader.reset();
+
+                        const value = result.getText();
+                        resultText.textContent = value;
+                        resultBox.style.display = 'flex';
+                        status.textContent = 'Code found!';
+
+                        // auto-copy
+                        copyToClipboard(value);
+                    }
+                }
+            );
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy to Clipboard';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(() => {
+                // fallback for older browsers
+                const el = document.createElement('textarea');
+                el.value = text;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+            });
+        }
+
+        copyBtn.addEventListener('click', () => copyToClipboard(resultText.textContent));
+        scanAgainBtn.addEventListener('click', startScanner);
+
+        startScanner();
+
+        // The shared service worker at the site root (/sw.js) caches
+        // this page for offline use.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+        }
+    </script>
+</body>
+</html>
