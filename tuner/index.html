@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tuner</title>
+<meta name="description" content="Guitar tuner without ads or subscriptions. Works offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/icons/tuner.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tuner">
+<meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#100e17" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg: #f6f3ee;
+    --fg: #17151f;
+    --muted: #6b6676;
+    --tile-bg: rgba(255, 255, 255, 0.6);
+    --tile-border: rgba(23, 21, 31, 0.08);
+    --accent: #993556;
+    --in-tune: #3B6D11;
+    --off: #D85A30;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #100e17;
+      --fg: #f3f1f8;
+      --muted: #a49fb3;
+      --tile-bg: rgba(255, 255, 255, 0.05);
+      --tile-border: rgba(255, 255, 255, 0.09);
+      --accent: #ED93B1;
+      --in-tune: #97C459;
+      --off: #F0997B;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: max(env(safe-area-inset-top), 1rem) 1rem max(env(safe-area-inset-bottom), 1rem);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .top, main { max-width: 520px; width: 100%; margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  .back { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 0.4rem 0; }
+  .ref { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--muted); }
+  .ref button {
+    font: inherit; font-weight: 700; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+    border: 1px solid var(--tile-border); background: var(--tile-bg); color: var(--fg); cursor: pointer;
+  }
+  .ref b { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+  main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.75rem; }
+  .note { text-align: center; }
+  .note-name {
+    font-size: clamp(6rem, 34vw, 10rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .note-name sub { font-size: 0.32em; font-weight: 700; color: var(--muted); vertical-align: baseline; margin-left: 0.05em; }
+  .note-name.in-tune { color: var(--in-tune); }
+  .freq { margin-top: 0.35rem; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.3em; }
+
+  .meter { position: relative; height: 64px; }
+  .scale { position: absolute; inset: 24px 0 auto; height: 16px; display: flex; justify-content: space-between; }
+  .scale i { width: 2px; height: 10px; background: var(--tile-border); border-radius: 1px; }
+  .scale i:nth-child(5n+1) { height: 16px; background: var(--muted); opacity: 0.5; }
+  .scale i.center { height: 22px; margin-top: -3px; background: var(--in-tune); opacity: 1; }
+  .needle {
+    position: absolute; left: 50%; top: 8px; width: 4px; height: 48px; margin-left: -2px;
+    border-radius: 2px; background: var(--muted); opacity: 0.35;
+    transition: transform 0.12s linear, background 0.15s, opacity 0.15s;
+  }
+  .needle.active { opacity: 1; background: var(--off); }
+  .needle.in-tune { background: var(--in-tune); }
+  .labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+  .hint { text-align: center; font-size: 0.95rem; font-weight: 600; min-height: 1.3em; }
+  .hint.in-tune { color: var(--in-tune); }
+  .hint.off { color: var(--off); }
+
+  .strings { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.45rem; }
+  .string {
+    text-align: center; padding: 0.6rem 0 0.5rem; border-radius: 14px;
+    background: var(--tile-bg); border: 1px solid var(--tile-border);
+    font-weight: 800; font-size: 1.15rem; transition: border-color 0.15s, color 0.15s;
+  }
+  .string small { display: block; font-size: 0.62rem; font-weight: 600; color: var(--muted); margin-top: 0.1rem; }
+  .string.near { border-color: var(--accent); color: var(--accent); }
+  .string.near.in-tune { border-color: var(--in-tune); color: var(--in-tune); }
+
+  .start {
+    font: inherit; font-size: 1.05rem; font-weight: 700; color: #fff; background: var(--accent);
+    border: none; border-radius: 14px; padding: 0.95rem; cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) { .start { color: #4B1528; } }
+  .message { font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="back" href="/">← Apps</a>
+    <span class="ref">A4 <button type="button" id="ref-down" aria-label="Lower reference">−</button><b id="ref">440</b> Hz<button type="button" id="ref-up" aria-label="Raise reference">+</button></span>
+  </div>
+
+  <main>
+    <div class="note">
+      <div class="note-name" id="note">–</div>
+      <div class="freq" id="freq"></div>
+    </div>
+
+    <div>
+      <div class="meter">
+        <div class="scale" id="scale"></div>
+        <div class="needle" id="needle"></div>
+      </div>
+      <div class="labels"><span>−50</span><span>cents</span><span>+50</span></div>
+    </div>
+    <div class="hint" id="hint"></div>
+
+    <div class="strings" id="strings"></div>
+
+    <button class="start" id="start" type="button">Start tuner</button>
+    <div class="message" id="message">Uses the microphone. Nothing is recorded or sent anywhere.</div>
+  </main>
+
+<script>
+  const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  // Standard tuning, low to high, as MIDI note numbers.
+  const STRINGS = [
+    { name: 'E', octave: 2, midi: 40 },
+    { name: 'A', octave: 2, midi: 45 },
+    { name: 'D', octave: 3, midi: 50 },
+    { name: 'G', octave: 3, midi: 55 },
+    { name: 'B', octave: 3, midi: 59 },
+    { name: 'E', octave: 4, midi: 64 },
+  ];
+  const IN_TUNE_CENTS = 5;
+  const $ = id => document.getElementById(id);
+
+  let refHz = 440;
+  try { refHz = Number(localStorage.getItem('tuner.ref')) || 440; } catch {}
+
+  // Build the scale ticks (-50..+50 in 5-cent steps) and the string chips.
+  $('scale').innerHTML = Array.from({ length: 21 }, (_, i) => `<i${i === 10 ? ' class="center"' : ''}></i>`).join('');
+  $('strings').innerHTML = STRINGS.map((s, i) => `<div class="string" id="string-${i}">${s.name}<small>${s.octave}</small></div>`).join('');
+
+  function renderRef() { $('ref').textContent = refHz; }
+  function changeRef(delta) {
+    refHz = Math.min(450, Math.max(430, refHz + delta));
+    try { localStorage.setItem('tuner.ref', String(refHz)); } catch {}
+    renderRef();
+  }
+  $('ref-down').addEventListener('click', () => changeRef(-1));
+  $('ref-up').addEventListener('click', () => changeRef(1));
+  renderRef();
+
+  const midiToHz = m => refHz * Math.pow(2, (m - 69) / 12);
+  const hzToMidi = f => 69 + 12 * Math.log2(f / refHz);
+
+  // ---- Pitch detection: normalized autocorrelation with parabolic interpolation.
+  // Searches periods for 60–1000 Hz, which covers the guitar (and dropped tunings).
+  function detectPitch(buf, sampleRate) {
+    const n = buf.length;
+    let rms = 0;
+    for (let i = 0; i < n; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / n);
+    if (rms < 0.008) return null;   // too quiet: no string playing
+
+    const minLag = Math.floor(sampleRate / 1000);
+    const maxLag = Math.min(Math.floor(sampleRate / 60), Math.floor(n / 2));
+    const corr = new Float32Array(maxLag + 1);
+    for (let lag = minLag; lag <= maxLag; lag++) {
+      let sum = 0, e1 = 0, e2 = 0;
+      for (let i = 0; i < n - lag; i++) {
+        const a = buf[i], b = buf[i + lag];
+        sum += a * b; e1 += a * a; e2 += b * b;
+      }
+      corr[lag] = sum / Math.sqrt(e1 * e2 || 1);
+    }
+    // Take the first strong peak rather than the global maximum, to avoid octave errors.
+    let best = -1, bestLag = -1;
+    for (let lag = minLag; lag <= maxLag; lag++) if (corr[lag] > best) { best = corr[lag]; bestLag = lag; }
+    if (best < 0.85) return null;   // not a clear, periodic tone
+    const threshold = best * 0.9;
+    for (let lag = minLag + 1; lag < maxLag; lag++) {
+      if (corr[lag] >= threshold && corr[lag] >= corr[lag - 1] && corr[lag] >= corr[lag + 1]) { bestLag = lag; break; }
+    }
+    const y0 = corr[bestLag - 1] ?? corr[bestLag], y1 = corr[bestLag], y2 = corr[bestLag + 1] ?? corr[bestLag];
+    const shift = (y0 - y2) / (2 * (y0 - 2 * y1 + y2) || 1);
+    return sampleRate / (bestLag + (Number.isFinite(shift) ? shift : 0));
+  }
+
+  // ---- Display
+  const recent = [];
+  let lastHeard = 0;
+
+  function show(freq) {
+    if (freq == null) {
+      if (performance.now() - lastHeard > 1200) {
+        $('note').textContent = '–';
+        $('note').className = 'note-name';
+        $('freq').textContent = 'Play a string';
+        $('hint').textContent = '';
+        $('needle').className = 'needle';
+        $('needle').style.transform = 'translateX(0)';
+        for (let i = 0; i < STRINGS.length; i++) $(`string-${i}`).className = 'string';
+      }
+      return;
+    }
+    lastHeard = performance.now();
+    // Median of the last few readings keeps the needle steady.
+    recent.push(freq);
+    if (recent.length > 5) recent.shift();
+    const f = [...recent].sort((a, b) => a - b)[Math.floor(recent.length / 2)];
+
+    const midi = hzToMidi(f);
+    const nearest = Math.round(midi);
+    const cents = Math.round((midi - nearest) * 100);
+    const inTune = Math.abs(cents) <= IN_TUNE_CENTS;
+    const octave = Math.floor(nearest / 12) - 1;
+
+    $('note').innerHTML = `${NOTE_NAMES[((nearest % 12) + 12) % 12]}<sub>${octave}</sub>`;
+    $('note').className = 'note-name' + (inTune ? ' in-tune' : '');
+    $('freq').textContent = `${f.toFixed(1)} Hz · target ${midiToHz(nearest).toFixed(1)} Hz`;
+
+    const meterWidth = $('scale').getBoundingClientRect().width;
+    const x = Math.max(-50, Math.min(50, cents)) / 50 * (meterWidth / 2);
+    $('needle').style.transform = `translateX(${x}px)`;
+    $('needle').className = 'needle active' + (inTune ? ' in-tune' : '');
+
+    $('hint').textContent = inTune ? 'In tune' : cents < 0 ? `Tune up · ${cents} cents` : `Tune down · +${cents} cents`;
+    $('hint').className = 'hint ' + (inTune ? 'in-tune' : 'off');
+
+    // Highlight the closest guitar string (within a few semitones).
+    let closest = -1, dist = Infinity;
+    STRINGS.forEach((s, i) => { const d = Math.abs(midi - s.midi); if (d < dist) { dist = d; closest = i; } });
+    for (let i = 0; i < STRINGS.length; i++) {
+      const near = i === closest && dist < 2.5;
+      $(`string-${i}`).className = 'string' + (near ? ' near' : '') + (near && inTune && nearest === STRINGS[i].midi ? ' in-tune' : '');
+    }
+  }
+
+  // ---- Microphone
+  let running = false;
+  async function start() {
+    if (running) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      await ctx.resume();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 4096;
+      source.connect(analyser);
+      const buf = new Float32Array(analyser.fftSize);
+      running = true;
+      $('start').hidden = true;
+      $('message').textContent = 'Listening… Nothing is recorded or sent anywhere.';
+      show(null);
+      keepAwake();
+
+      let busy = false;
+      setInterval(() => {
+        if (busy) return;
+        busy = true;
+        analyser.getFloatTimeDomainData(buf);
+        show(detectPitch(buf, ctx.sampleRate));
+        busy = false;
+      }, 60);
+    } catch (err) {
+      $('message').textContent = err && err.name === 'NotAllowedError'
+        ? 'Microphone access was blocked. Allow it for this site in your settings, then try again.'
+        : 'The microphone could not be started on this device.';
+    }
+  }
+  $('start').addEventListener('click', start);
+
+  let wakeLock = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } } catch {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && running) keepAwake(); });
+
+  // Test hook: ?test=<Hz> feeds a synthetic guitar-like tone through the detector.
+  const testHz = Number(new URLSearchParams(location.search).get('test'));
+  if (testHz) {
+    const sr = 48000, n = 4096, buf = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      buf[i] = 0.5 * Math.sin(2 * Math.PI * testHz * t) + 0.35 * Math.sin(4 * Math.PI * testHz * t) + 0.2 * Math.sin(6 * Math.PI * testHz * t);
+    }
+    window.__detected = detectPitch(buf, sr);
+    show(window.__detected);
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  }
+</script>
+</body>
+</html>
