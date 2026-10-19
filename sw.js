@@ -1,14 +1,14 @@
 // Offline support for the landing page and the tools that work without internet.
-// The landing page, /speedometer/ and /dmc-scanner/ all register this worker.
+// The landing page and the small apps (/speedometer/, /speedtest/, /dmc-scanner/) register this worker.
 // Strategy: network first (so updates show up as soon as you're online),
 // falling back to the cached copy when offline or the network is too slow.
 
-const CACHE = 'nolo-offline-v2';
+const CACHE = 'nolo-offline-v3';
 const NETWORK_TIMEOUT_MS = 3000;
 
 // Only these paths are handled; everything else (Visible From, Places I've
 // Walked, external sites) goes straight to the network as before.
-const OFFLINE_PREFIXES = ['/speedometer/', '/dmc-scanner/', '/assets/', '/icons/'];
+const OFFLINE_PREFIXES = ['/speedometer/', '/speedtest/', '/dmc-scanner/', '/assets/', '/icons/'];
 const OFFLINE_FILES = ['/', '/index.html', '/manifest.webmanifest', '/apple-touch-icon.png'];
 
 const PRECACHE = [
@@ -22,6 +22,7 @@ const PRECACHE = [
   '/icons/visible-from.svg',
   '/icons/places-i-walked.svg',
   '/icons/swissmap.svg',
+  '/icons/speedtest.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/speedometer/',
@@ -29,6 +30,11 @@ const PRECACHE = [
   '/speedometer/apple-touch-icon.png',
   '/speedometer/icon-192.png',
   '/speedometer/icon-512.png',
+  '/speedtest/',
+  '/speedtest/manifest.webmanifest',
+  '/speedtest/apple-touch-icon.png',
+  '/speedtest/icon-192.png',
+  '/speedtest/icon-512.png',
   '/dmc-scanner/',
   '/dmc-scanner/vendor/zxing-0.20.0.min.js',
   '/dmc-scanner/manifest.json',

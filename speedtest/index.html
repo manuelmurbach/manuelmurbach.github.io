@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Speed Test</title>
+<meta name="description" content="Internet speed test without ads: ping, download and upload.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/icons/speedtest.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Speed Test">
+<meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#100e17" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg: #f6f3ee;
+    --fg: #17151f;
+    --muted: #6b6676;
+    --tile-bg: rgba(255, 255, 255, 0.6);
+    --tile-border: rgba(23, 21, 31, 0.08);
+    --accent: #0F6E56;
+    --accent-soft: #E1F5EE;
+    --bad: #d6453a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #100e17;
+      --fg: #f3f1f8;
+      --muted: #a49fb3;
+      --tile-bg: rgba(255, 255, 255, 0.05);
+      --tile-border: rgba(255, 255, 255, 0.09);
+      --accent: #5DCAA5;
+      --accent-soft: #04342C;
+      --bad: #ff7b6e;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: max(env(safe-area-inset-top), 1rem) 1rem max(env(safe-area-inset-bottom), 1rem);
+  }
+  .top, main { max-width: 520px; width: 100%; margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+  .back { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 0.4rem 0; }
+
+  main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.5rem; }
+  .live { text-align: center; }
+  .live-label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); min-height: 1.2em; }
+  .live-value {
+    font-size: clamp(5.5rem, 30vw, 9.5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-unit { font-size: 1.1rem; font-weight: 700; color: var(--muted); }
+  .bar { height: 6px; border-radius: 3px; background: var(--tile-border); overflow: hidden; margin-top: 1rem; }
+  .bar-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s linear; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+  .stat { background: var(--tile-bg); border: 1px solid var(--tile-border); border-radius: 16px; padding: 0.75rem 0.85rem; }
+  .stat.active { border-color: var(--accent); }
+  .stat-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .stat-value { margin-top: 0.15rem; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 0.15rem; }
+  .stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; min-height: 1em; }
+
+  .start {
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 14px;
+    padding: 0.95rem;
+    cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) { .start { color: #04342C; } }
+  .start:disabled { opacity: 0.5; cursor: default; }
+  .message { font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 1.2em; }
+  .message.error { color: var(--bad); }
+
+  .history h2 { margin: 0 0 0.4rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .history ol { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+  .history li { display: grid; grid-template-columns: 1.4fr 1fr 1fr 0.8fr; gap: 0.4rem; padding: 0.35rem 0; border-top: 1px solid var(--tile-border); color: var(--muted); }
+  .history li b { color: var(--fg); font-weight: 700; }
+  .note { font-size: 0.7rem; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <a class="back" href="/">← Apps</a>
+  </div>
+
+  <main>
+    <div class="live">
+      <div class="live-label" id="phase">Ready</div>
+      <div class="live-value" id="live">–</div>
+      <div class="live-unit" id="live-unit">Mbit/s</div>
+      <div class="bar"><div class="bar-fill" id="bar"></div></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat" id="card-ping">
+        <div class="stat-label">Ping</div>
+        <div class="stat-value" id="ping">–</div>
+        <div class="stat-sub" id="jitter"></div>
+      </div>
+      <div class="stat" id="card-down">
+        <div class="stat-label">Download</div>
+        <div class="stat-value" id="down">–</div>
+        <div class="stat-sub">Mbit/s</div>
+      </div>
+      <div class="stat" id="card-up">
+        <div class="stat-label">Upload</div>
+        <div class="stat-value" id="up">–</div>
+        <div class="stat-sub">Mbit/s</div>
+      </div>
+    </div>
+
+    <button class="start" id="start" type="button">Start test</button>
+    <div class="message" id="message"></div>
+
+    <section class="history" id="history" hidden>
+      <h2>Recent tests</h2>
+      <ol id="history-list"></ol>
+    </section>
+
+    <div class="note">Measured against Cloudflare's speed test servers. A test takes about 10 seconds and usually uses less than 30 MB of data.</div>
+  </main>
+
+<script>
+  const BASE = 'https://speed.cloudflare.com';
+  const PING_COUNT = 15;
+  const STREAMS = 3;                 // parallel connections, so fast lines can be saturated
+  const DOWN_SECONDS = 4, UP_SECONDS = 4;  // short test: enough for a good estimate
+  const DOWN_CAP = 20e6, UP_CAP = 8e6;     // bytes, keeps mobile data use small
+  const DOWN_CHUNK = 5e6, UP_CHUNK = 1e6;
+  const WARMUP_MS = 700;             // ignore the start (TCP slow start)
+
+  const $ = id => document.getElementById(id);
+  const fmt = mbps => mbps >= 100 ? Math.round(mbps).toString() : mbps.toFixed(1);
+
+  function setPhase(name, card) {
+    $('phase').textContent = name;
+    for (const id of ['card-ping', 'card-down', 'card-up']) $(id).classList.toggle('active', id === card);
+  }
+  function setLive(value, unit, progress) {
+    $('live').textContent = value;
+    $('live-unit').textContent = unit;
+    $('bar').style.width = `${Math.min(100, progress * 100)}%`;
+  }
+
+  // ---- Ping: time tiny requests; median is the ping, mean step-to-step change the jitter.
+  async function measurePing() {
+    const times = [];
+    for (let i = 0; i < PING_COUNT; i++) {
+      const t0 = performance.now();
+      const res = await fetch(`${BASE}/__down?bytes=0&r=${Math.random()}`, { cache: 'no-store' });
+      await res.arrayBuffer();
+      const ms = performance.now() - t0;
+      if (i === 0) continue;   // first request includes connection setup
+      times.push(ms);
+      setLive(Math.round(ms), 'ms', i / PING_COUNT);
+    }
+    const sorted = [...times].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    let jitter = 0;
+    for (let i = 1; i < times.length; i++) jitter += Math.abs(times[i] - times[i - 1]);
+    jitter /= times.length - 1;
+    return { ping: median, jitter };
+  }
+
+  // ---- Throughput: several streams in parallel for a fixed time; bytes counted live.
+  async function measureThroughput(kind, onUpdate) {
+    const seconds = kind === 'down' ? DOWN_SECONDS : UP_SECONDS;
+    const cap = kind === 'down' ? DOWN_CAP : UP_CAP;
+    let bytes = 0;
+    const controller = new AbortController();
+    const start = performance.now();
+    let warmBytes = 0, warmTime = null;
+
+    const done = () => performance.now() - start > seconds * 1000 || bytes >= cap;
+    const tick = setInterval(() => {
+      const t = performance.now() - start;
+      if (warmTime === null && t > WARMUP_MS) { warmTime = t; warmBytes = bytes; }
+      onUpdate(currentMbps(), t / (seconds * 1000));
+      if (done()) controller.abort();
+    }, 200);
+
+    function currentMbps() {
+      const t = performance.now() - start;
+      if (warmTime === null) return t > 0 ? bytes * 8 / t / 1000 : 0;
+      return (bytes - warmBytes) * 8 / (t - warmTime) / 1000;
+    }
+
+    const payload = kind === 'up' ? randomBytes(UP_CHUNK) : null;
+
+    async function downloadStream() {
+      while (!done()) {
+        const res = await fetch(`${BASE}/__down?bytes=${DOWN_CHUNK}&r=${Math.random()}`, { cache: 'no-store', signal: controller.signal });
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done: end, value } = await reader.read();
+          if (end) break;
+          bytes += value.length;
+        }
+      }
+    }
+    function uploadOnce() {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let sent = 0;
+        xhr.open('POST', `${BASE}/__up?r=${Math.random()}`);
+        xhr.upload.onprogress = e => { bytes += e.loaded - sent; sent = e.loaded; };
+        xhr.onload = () => { bytes += UP_CHUNK - sent; resolve(); };
+        xhr.onerror = () => reject(new Error('upload failed'));
+        xhr.onabort = () => resolve();
+        controller.signal.addEventListener('abort', () => xhr.abort());
+        xhr.send(payload);
+      });
+    }
+    async function uploadStream() {
+      while (!done()) await uploadOnce();
+    }
+
+    const worker = kind === 'down' ? downloadStream : uploadStream;
+    try {
+      await Promise.all(Array.from({ length: STREAMS }, () => worker().catch(err => {
+        if (err.name !== 'AbortError') throw err;
+      })));
+    } finally {
+      clearInterval(tick);
+      controller.abort();
+    }
+    return { mbps: currentMbps(), bytes };
+  }
+
+  function randomBytes(n) {
+    const buf = new Uint8Array(n);
+    for (let i = 0; i < n; i += 65536) crypto.getRandomValues(buf.subarray(i, Math.min(n, i + 65536)));
+    return buf;
+  }
+
+  // ---- History (this device only)
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem('speedtest.history')) || []; } catch { return []; }
+  }
+  function saveHistory(list) {
+    try { localStorage.setItem('speedtest.history', JSON.stringify(list.slice(0, 10))); } catch {}
+  }
+  function renderHistory() {
+    const list = loadHistory();
+    $('history').hidden = list.length === 0;
+    $('history-list').innerHTML = list.map(r => {
+      const d = new Date(r.t);
+      const when = d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+      return `<li><span>${when}</span><span>↓ <b>${fmt(r.down)}</b></span><span>↑ <b>${fmt(r.up)}</b></span><span>${Math.round(r.ping)} ms</span></li>`;
+    }).join('');
+  }
+
+  async function run() {
+    if (!navigator.onLine) {
+      $('message').textContent = 'You are offline. Connect to the internet to run a test.';
+      $('message').className = 'message error';
+      return;
+    }
+    $('start').disabled = true;
+    $('message').textContent = '';
+    $('message').className = 'message';
+    for (const id of ['ping', 'down', 'up']) $(id).textContent = '–';
+    $('jitter').textContent = '';
+
+    try {
+      setPhase('Ping', 'card-ping');
+      const { ping, jitter } = await measurePing();
+      $('ping').innerHTML = `${Math.round(ping)}<small>ms</small>`;
+      $('jitter').textContent = `Jitter ${Math.round(jitter)} ms`;
+
+      setPhase('Download', 'card-down');
+      const down = await measureThroughput('down', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p));
+      $('down').textContent = fmt(down.mbps);
+
+      setPhase('Upload', 'card-up');
+      const up = await measureThroughput('up', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p));
+      $('up').textContent = fmt(up.mbps);
+
+      setPhase('Done', null);
+      setLive(fmt(down.mbps), 'Mbit/s download', 1);
+      const usedMb = Math.round((down.bytes + up.bytes) / 1e6);
+      $('message').textContent = `Data used: about ${usedMb} MB`;
+
+      saveHistory([{ t: Date.now(), ping, down: down.mbps, up: up.mbps }, ...loadHistory()]);
+      renderHistory();
+    } catch (err) {
+      setPhase('Stopped', null);
+      $('message').textContent = 'The test could not reach the speed test server. Check your connection and try again.';
+      $('message').className = 'message error';
+    } finally {
+      $('start').disabled = false;
+      $('start').textContent = 'Run again';
+    }
+  }
+
+  $('start').addEventListener('click', run);
+  renderHistory();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  }
+</script>
+</body>
+</html>
