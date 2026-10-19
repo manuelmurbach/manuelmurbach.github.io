@@ -16,8 +16,6 @@ const PRECACHE = [
   '/assets/preview-visible-from.jpg',
   '/assets/preview-places-i-walked.jpg',
   '/assets/preview-swissmap.jpg',
-  '/assets/preview-dmc-scanner.jpg',
-  '/assets/preview-speedometer.jpg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/speedometer/',

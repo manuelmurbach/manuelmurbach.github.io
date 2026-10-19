@@ -141,7 +141,38 @@
     .social svg { width: 17px; height: 17px; }
   }
 
-  .section + .section { margin-top: 2.5rem; }
+  .apps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 84px);
+    gap: 1.25rem 0.75rem;
+    margin-bottom: 2.75rem;
+  }
+  .app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0;
+    animation: rise 0.7s ease-out 0.16s forwards;
+  }
+  .app img {
+    width: 64px;
+    height: 64px;
+    border-radius: 22%;
+    box-shadow: 0 6px 16px -4px var(--shadow);
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1);
+  }
+  .app:hover img { transform: translateY(-3px) scale(1.04); }
+  .app:active img { transform: scale(0.94); }
+  .app span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
   .section-head { margin-bottom: 0.9rem; opacity: 0; animation: rise 0.7s ease-out 0.1s forwards; }
   .section-head h2 {
     margin: 0;
@@ -164,6 +195,7 @@
     header { margin-bottom: 1.75rem; }
     .brand-icon { width: 40px; height: 40px; font-size: 1.25rem; }
     .tile-body { padding: 0.75rem 0.9rem 0.9rem; }
+    .apps { grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem; }
   }
 
   .tile {
@@ -246,19 +278,6 @@
     font-size: 0.9rem;
   }
   .tile:hover .tile-arrow { transform: translateX(0); opacity: 1; }
-  .offline-badge {
-    display: inline-block;
-    margin-left: 0.35rem;
-    padding: 0.05rem 0.4rem;
-    border-radius: 999px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    vertical-align: 0.1rem;
-    color: var(--accent-3);
-    border: 1px solid currentColor;
-  }
   .tile-desc {
     margin-top: 0.3rem;
     font-size: 0.72rem;
@@ -266,7 +285,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    header h1, .tile, .blob, .section-head { animation: none !important; opacity: 1 !important; }
+    header h1, .tile, .blob, .section-head, .app { animation: none !important; opacity: 1 !important; }
   }
   @keyframes rise {
     from { opacity: 0; transform: translateY(10px); }
@@ -295,57 +314,18 @@
       </div>
     </header>
 
-    <section class="section">
-      <div class="section-head">
-        <h2>Small Apps</h2>
-        <p>Open right here and work offline. Add this page to your home screen to use them on the go.</p>
-      </div>
-      <div class="grid">
-        <a class="tile" href="/dmc-scanner/">
-          <div class="preview">
-            <img src="assets/preview-dmc-scanner.jpg" alt="DMC Scanner app screenshot">
-          </div>
-          <div class="tile-body">
-            <div class="tile-title">
-              <span class="tile-title-main">
-                <span class="tile-icon icon-scan">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 8V6a2 2 0 0 1 2-2h2M18 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M6 20H4a2 2 0 0 1-2-2v-2" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="4" y1="12" x2="20" y2="12" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                </span>
-                <span class="tile-title-text">DMC Scanner</span>
-              </span>
-              <span class="tile-arrow">→</span>
-            </div>
-            <div class="tile-desc">Scan Data Matrix codes with your camera and get the decoded text instantly, ready to copy.<span class="offline-badge">Offline</span></div>
-          </div>
-        </a>
+    <nav class="apps" aria-label="Small apps (work offline)">
+      <a class="app" href="/dmc-scanner/">
+        <img src="dmc-scanner/apple-touch-icon.png" alt="">
+        <span>DMC Scanner</span>
+      </a>
+      <a class="app" href="/speedometer/">
+        <img src="speedometer/apple-touch-icon.png" alt="">
+        <span>Speedometer</span>
+      </a>
+    </nav>
 
-        <a class="tile" href="/speedometer/">
-          <div class="preview">
-            <img src="assets/preview-speedometer.jpg" alt="Speedometer app screenshot">
-          </div>
-          <div class="tile-body">
-            <div class="tile-title">
-              <span class="tile-title-main">
-                <span class="tile-icon icon-speed">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 17a8 8 0 0 1 16 0" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-                    <path d="M12 17l4-5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-                  </svg>
-                </span>
-                <span class="tile-title-text">Speedometer</span>
-              </span>
-              <span class="tile-arrow">→</span>
-            </div>
-            <div class="tile-desc">GPS speed, altitude and heading, even in airplane mode. Switch between km/h + m and kn + ft.<span class="offline-badge">Offline</span></div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="section">
+    <section class="section larger">
       <div class="section-head">
         <h2>Larger Apps</h2>
         <p>Open in a new tab and need an internet connection.</p>
