@@ -76,6 +76,9 @@
   .stat-value { margin-top: 0.15rem; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .stat-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 0.15rem; }
   .stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; min-height: 1em; }
+  .spark { display: block; width: 100%; height: 20px; margin-top: 0.35rem; overflow: visible; }
+  .spark-line { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .spark-area { fill: var(--muted); fill-opacity: 0.12; stroke: none; }
 
   .start {
     font: inherit;
@@ -171,6 +174,10 @@
       <div class="stat" id="card-ping">
         <div class="stat-label">Ping</div>
         <div class="stat-value" id="ping">–</div>
+        <svg id="ping-spark" class="spark" viewBox="0 0 100 24" aria-hidden="true">
+          <path id="ping-spark-area" class="spark-area" d="" />
+          <path id="ping-spark-line" class="spark-line" d="" />
+        </svg>
         <div class="stat-sub" id="jitter"></div>
       </div>
       <div class="stat" id="card-down">
@@ -218,9 +225,29 @@
     $('bar').style.width = `${Math.min(100, progress * 100)}%`;
   }
 
+  // Tiny trend line on the Ping card itself (own ms scale, so it stays off
+  // the Mbit/s chart rather than sharing an axis with it).
+  function drawPingSpark(times) {
+    const W = 100, H = 24, PAD = 2;
+    if (!times.length) {
+      $('ping-spark-line').setAttribute('d', '');
+      $('ping-spark-area').setAttribute('d', '');
+      return;
+    }
+    const min = Math.min(...times), max = Math.max(...times);
+    const range = Math.max(1, max - min);
+    const x = i => PAD + (i / Math.max(1, times.length - 1)) * (W - PAD * 2);
+    const y = v => PAD + (H - PAD * 2) - ((v - min) / range) * (H - PAD * 2);
+    const line = times.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const base = H - PAD;
+    $('ping-spark-line').setAttribute('d', line);
+    $('ping-spark-area').setAttribute('d', `${line} L${x(times.length - 1).toFixed(1)},${base} L${x(0).toFixed(1)},${base} Z`);
+  }
+
   // ---- Ping: time tiny requests; median is the ping, mean step-to-step change the jitter.
   async function measurePing() {
     const times = [];
+    drawPingSpark(times);
     for (let i = 0; i < PING_COUNT; i++) {
       const t0 = performance.now();
       const res = await fetch(`${BASE}/__down?bytes=0&r=${Math.random()}`, { cache: 'no-store' });
@@ -228,6 +255,7 @@
       const ms = performance.now() - t0;
       if (i === 0) continue;   // first request includes connection setup
       times.push(ms);
+      drawPingSpark(times);
       setLive(Math.round(ms), 'ms', i / PING_COUNT);
     }
     const sorted = [...times].sort((a, b) => a - b);
@@ -436,6 +464,7 @@
     timeline = [];
     $('graph-card').hidden = false;
     drawChart();
+    drawPingSpark([]);
 
     try {
       setPhase('Ping', 'card-ping');
