@@ -23,6 +23,7 @@
     --accent: #0F6E56;
     --accent-soft: #E1F5EE;
     --series-up: #2a78d6;
+    --series-ping: #c4631f;
     --bad: #d6453a;
   }
   @media (prefers-color-scheme: dark) {
@@ -35,6 +36,7 @@
       --accent: #5DCAA5;
       --accent-soft: #04342C;
       --series-up: #3987e5;
+      --series-ping: #d9893f;
       --bad: #ff7b6e;
     }
   }
@@ -76,9 +78,6 @@
   .stat-value { margin-top: 0.15rem; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .stat-value small { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-left: 0.15rem; }
   .stat-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; min-height: 1em; }
-  .spark { display: block; width: 100%; height: 20px; margin-top: 0.35rem; overflow: visible; }
-  .spark-line { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
-  .spark-area { fill: var(--muted); fill-opacity: 0.12; stroke: none; }
 
   .start {
     font: inherit;
@@ -114,12 +113,15 @@
   .graph-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .graph-legend .dot-down { background: var(--accent); }
   .graph-legend .dot-up { background: var(--series-up); }
+  .graph-legend .dot-ping { background: var(--series-ping); }
   #graph-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
   #graph-svg text { font-family: inherit; fill: var(--muted); }
   .series-down-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .series-down-area { fill: var(--accent); fill-opacity: 0.1; stroke: none; }
   .series-up-line { fill: none; stroke: var(--series-up); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .series-up-area { fill: var(--series-up); fill-opacity: 0.1; stroke: none; }
+  .series-ping-line { fill: none; stroke: var(--series-ping); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1 4; }
+  .series-ping-area { fill: var(--series-ping); fill-opacity: 0.1; stroke: none; }
   .end-dot { stroke: var(--tile-bg); stroke-width: 2; opacity: 0; transition: opacity 0.15s; }
   .end-label { font-weight: 700; opacity: 0; transition: opacity 0.15s; }
   .grid-line { stroke: var(--tile-border); stroke-width: 1; }
@@ -149,19 +151,25 @@
 
     <section class="graph-card" id="graph-card" hidden>
       <div class="graph-legend">
+        <span><i class="dot-ping"></i>Ping</span>
         <span><i class="dot-down"></i>Download</span>
         <span><i class="dot-up"></i>Upload</span>
       </div>
-      <svg id="graph-svg" viewBox="0 0 500 110" role="img" aria-label="Speed over the course of the test">
+      <svg id="graph-svg" viewBox="0 0 500 110" role="img" aria-label="Ping, download and upload over the course of the test">
         <line class="grid-line" id="grid-max-line" x1="0" y1="18" x2="500" y2="18" />
         <text id="grid-max-label" x="498" y="14" text-anchor="end" font-size="9"></text>
+        <text id="grid-ping-label" x="2" y="14" text-anchor="start" font-size="9"></text>
         <line class="grid-line" x1="0" y1="96" x2="500" y2="96" />
+        <path class="series-ping-area" id="area-ping" d="" />
         <path class="series-down-area" id="area-down" d="" />
         <path class="series-up-area" id="area-up" d="" />
+        <path class="series-ping-line" id="line-ping" d="" />
         <path class="series-down-line" id="line-down" d="" />
         <path class="series-up-line" id="line-up" d="" />
+        <circle class="end-dot" id="end-ping" r="4" fill="var(--series-ping)" />
         <circle class="end-dot" id="end-down" r="4" fill="var(--accent)" />
         <circle class="end-dot" id="end-up" r="4" fill="var(--series-up)" />
+        <text class="end-label" id="end-ping-label" font-size="9" fill="var(--series-ping)"></text>
         <text class="end-label" id="end-down-label" font-size="9" fill="var(--accent)"></text>
         <text class="end-label" id="end-up-label" font-size="9" fill="var(--series-up)"></text>
         <line class="hover-line" id="hover-line" y1="18" y2="96" />
@@ -174,10 +182,6 @@
       <div class="stat" id="card-ping">
         <div class="stat-label">Ping</div>
         <div class="stat-value" id="ping">–</div>
-        <svg id="ping-spark" class="spark" viewBox="0 0 100 24" aria-hidden="true">
-          <path id="ping-spark-area" class="spark-area" d="" />
-          <path id="ping-spark-line" class="spark-line" d="" />
-        </svg>
         <div class="stat-sub" id="jitter"></div>
       </div>
       <div class="stat" id="card-down">
@@ -225,29 +229,10 @@
     $('bar').style.width = `${Math.min(100, progress * 100)}%`;
   }
 
-  // Tiny trend line on the Ping card itself (own ms scale, so it stays off
-  // the Mbit/s chart rather than sharing an axis with it).
-  function drawPingSpark(times) {
-    const W = 100, H = 24, PAD = 2;
-    if (!times.length) {
-      $('ping-spark-line').setAttribute('d', '');
-      $('ping-spark-area').setAttribute('d', '');
-      return;
-    }
-    const min = Math.min(...times), max = Math.max(...times);
-    const range = Math.max(1, max - min);
-    const x = i => PAD + (i / Math.max(1, times.length - 1)) * (W - PAD * 2);
-    const y = v => PAD + (H - PAD * 2) - ((v - min) / range) * (H - PAD * 2);
-    const line = times.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    const base = H - PAD;
-    $('ping-spark-line').setAttribute('d', line);
-    $('ping-spark-area').setAttribute('d', `${line} L${x(times.length - 1).toFixed(1)},${base} L${x(0).toFixed(1)},${base} Z`);
-  }
-
   // ---- Ping: time tiny requests; median is the ping, mean step-to-step change the jitter.
   async function measurePing() {
+    const t0All = performance.now();
     const times = [];
-    drawPingSpark(times);
     for (let i = 0; i < PING_COUNT; i++) {
       const t0 = performance.now();
       const res = await fetch(`${BASE}/__down?bytes=0&r=${Math.random()}`, { cache: 'no-store' });
@@ -255,7 +240,8 @@
       const ms = performance.now() - t0;
       if (i === 0) continue;   // first request includes connection setup
       times.push(ms);
-      drawPingSpark(times);
+      const tAbs = performance.now() - t0All;
+      addSample('ping', tAbs, tAbs, ms);
       setLive(Math.round(ms), 'ms', i / PING_COUNT);
     }
     const sorted = [...times].sort((a, b) => a - b);
@@ -263,7 +249,7 @@
     let jitter = 0;
     for (let i = 1; i < times.length; i++) jitter += Math.abs(times[i] - times[i - 1]);
     jitter /= times.length - 1;
-    return { ping: median, jitter };
+    return { ping: median, jitter, durationMs: performance.now() - t0All };
   }
 
   // ---- Throughput: several streams in parallel for a fixed time; bytes counted live.
@@ -343,63 +329,75 @@
     return buf;
   }
 
-  // ---- Graph: every tick above records an instantaneous-throughput sample.
-  // The average/peak stats are computed from these samples (post-warmup),
-  // not from the single final reading, and the same samples draw the chart.
+  // ---- Graph: every tick above records an instantaneous-throughput sample,
+  // and every ping records its round-trip time. All three series share one
+  // timeline (ping first, then download, then upload, back to back) so the
+  // whole test is one continuous chart. Ping lives on its own ms scale
+  // (plotted with the same zero baseline) since it's two orders of
+  // magnitude off Mbit/s. The average/peak stats are computed from these
+  // samples too (post-warmup for down/up), not from the single final reading.
   let timeline = [];
   let chartScale = null;
   const GRAPH_W = 500, GRAPH_H = 110, GRAPH_PAD_L = 4, GRAPH_PAD_T = 18, GRAPH_PAD_B = 14;
 
-  function addSample(kind, tAbs, tLocal, mbps) {
-    timeline.push({ kind, t: tAbs, tLocal, mbps: Math.max(0, mbps) });
+  function addSample(kind, tAbs, tLocal, v) {
+    timeline.push({ kind, t: tAbs, tLocal, v: Math.max(0, v) });
     drawChart();
   }
 
   function phaseAverage(kind) {
     const s = timeline.filter(d => d.kind === kind && d.tLocal > WARMUP_MS);
     if (!s.length) return null;
-    return s.reduce((a, d) => a + d.mbps, 0) / s.length;
+    return s.reduce((a, d) => a + d.v, 0) / s.length;
   }
   function phasePeak(kind) {
     const s = timeline.filter(d => d.kind === kind);
-    return s.length ? Math.max(...s.map(d => d.mbps)) : null;
+    return s.length ? Math.max(...s.map(d => d.v)) : null;
   }
 
   function drawChart() {
     const innerW = GRAPH_W - GRAPH_PAD_L * 2, innerH = GRAPH_H - GRAPH_PAD_T - GRAPH_PAD_B;
+    const throughput = timeline.filter(d => d.kind !== 'ping');
+    const pings = timeline.filter(d => d.kind === 'ping');
     const maxT = Math.max((DOWN_SECONDS + UP_SECONDS) * 1000, ...timeline.map(d => d.t));
-    const maxV = Math.max(10, ...timeline.map(d => d.mbps)) * 1.15;
+    const maxV = Math.max(10, ...throughput.map(d => d.v)) * 1.15;
+    const maxPing = Math.max(10, ...pings.map(d => d.v)) * 1.15;
     const x = t => GRAPH_PAD_L + (t / maxT) * innerW;
     const y = v => GRAPH_PAD_T + innerH - (v / maxV) * innerH;
-    chartScale = { x, y, maxT, maxV };
+    const yPing = v => GRAPH_PAD_T + innerH - (v / maxPing) * innerH;
+    chartScale = { x, y, yPing, maxT, maxV, maxPing };
 
-    function render(kind, lineId, areaId, dotId, labelId) {
+    function render(kind, lineId, areaId, dotId, labelId, yFn, fmtFn) {
       const pts = timeline.filter(d => d.kind === kind);
       if (!pts.length) {
         $(lineId).setAttribute('d', ''); $(areaId).setAttribute('d', '');
         $(dotId).style.opacity = 0; $(labelId).style.opacity = 0;
         return;
       }
-      const line = pts.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(d.t).toFixed(1)},${y(d.mbps).toFixed(1)}`).join(' ');
-      const base = y(0);
+      const line = pts.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(d.t).toFixed(1)},${yFn(d.v).toFixed(1)}`).join(' ');
+      const base = yFn(0);
       $(lineId).setAttribute('d', line);
       $(areaId).setAttribute('d', `${line} L${x(pts[pts.length - 1].t).toFixed(1)},${base} L${x(pts[0].t).toFixed(1)},${base} Z`);
       const last = pts[pts.length - 1];
-      const cx = x(last.t), cy = y(last.mbps);
+      const cx = x(last.t), cy = yFn(last.v);
       $(dotId).setAttribute('cx', cx); $(dotId).setAttribute('cy', cy); $(dotId).style.opacity = 1;
       $(labelId).setAttribute('x', Math.min(GRAPH_W - 4, cx + 6));
       $(labelId).setAttribute('y', Math.max(10, cy - 6));
       $(labelId).setAttribute('text-anchor', cx > GRAPH_W - 50 ? 'end' : 'start');
-      $(labelId).textContent = fmt(last.mbps);
+      $(labelId).textContent = fmtFn(last.v);
       $(labelId).style.opacity = 1;
     }
-    render('down', 'line-down', 'area-down', 'end-down', 'end-down-label');
-    render('up', 'line-up', 'area-up', 'end-up', 'end-up-label');
+    render('ping', 'line-ping', 'area-ping', 'end-ping', 'end-ping-label', yPing, v => `${Math.round(v)}`);
+    render('down', 'line-down', 'area-down', 'end-down', 'end-down-label', y, fmt);
+    render('up', 'line-up', 'area-up', 'end-up', 'end-up-label', y, fmt);
 
     const gridV = maxV / 1.15;
     $('grid-max-line').setAttribute('y1', y(gridV)); $('grid-max-line').setAttribute('y2', y(gridV));
     $('grid-max-label').setAttribute('y', y(gridV) - 4);
-    $('grid-max-label').textContent = timeline.length ? `${Math.round(gridV)} Mbit/s` : '';
+    $('grid-max-label').textContent = throughput.length ? `${Math.round(gridV)} Mbit/s` : '';
+    const gridP = maxPing / 1.15;
+    $('grid-ping-label').setAttribute('y', yPing(gridP) - 4);
+    $('grid-ping-label').textContent = pings.length ? `${Math.round(gridP)} ms` : '';
   }
 
   function onGraphMove(evt) {
@@ -412,15 +410,19 @@
       const dist = Math.abs(d.t - t);
       if (dist < bestDist) { bestDist = dist; nearest = d; }
     }
-    const cx = chartScale.x(nearest.t), cy = chartScale.y(nearest.mbps);
+    const isPing = nearest.kind === 'ping';
+    const yFn = isPing ? chartScale.yPing : chartScale.y;
+    const cx = chartScale.x(nearest.t), cy = yFn(nearest.v);
     $('hover-line').setAttribute('x1', cx); $('hover-line').setAttribute('x2', cx);
     $('hover-line').style.opacity = 1;
     $('hover-dot').setAttribute('cx', cx); $('hover-dot').setAttribute('cy', cy);
-    $('hover-dot').setAttribute('fill', nearest.kind === 'down' ? 'var(--accent)' : 'var(--series-up)');
+    $('hover-dot').setAttribute('fill', isPing ? 'var(--series-ping)' : nearest.kind === 'down' ? 'var(--accent)' : 'var(--series-up)');
     $('hover-dot').style.opacity = 1;
     $('hover-label').setAttribute('x', Math.min(GRAPH_W - 4, Math.max(4, cx)));
     $('hover-label').setAttribute('text-anchor', cx > GRAPH_W - 100 ? 'end' : (cx < 100 ? 'start' : 'middle'));
-    $('hover-label').textContent = `${nearest.kind === 'down' ? 'Download' : 'Upload'} · ${fmt(nearest.mbps)} Mbit/s · ${(nearest.tLocal / 1000).toFixed(1)}s`;
+    const label = isPing ? 'Ping' : nearest.kind === 'down' ? 'Download' : 'Upload';
+    const valueStr = isPing ? `${Math.round(nearest.v)} ms` : `${fmt(nearest.v)} Mbit/s`;
+    $('hover-label').textContent = `${label} · ${valueStr} · ${(nearest.tLocal / 1000).toFixed(1)}s`;
     $('hover-label').style.opacity = 1;
   }
   function onGraphLeave() {
@@ -464,23 +466,22 @@
     timeline = [];
     $('graph-card').hidden = false;
     drawChart();
-    drawPingSpark([]);
 
     try {
       setPhase('Ping', 'card-ping');
-      const { ping, jitter } = await measurePing();
+      const { ping, jitter, durationMs: pingDuration } = await measurePing();
       $('ping').innerHTML = `${Math.round(ping)}<small>ms</small>`;
       $('jitter').textContent = `Jitter ${Math.round(jitter)} ms`;
 
       setPhase('Download', 'card-down');
-      const down = await measureThroughput('down', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p));
+      const down = await measureThroughput('down', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p), pingDuration);
       const downAvg = phaseAverage('down') ?? down.mbps;
       const downPeak = phasePeak('down');
       $('down').textContent = fmt(downAvg);
       if (downPeak != null) $('down-sub').textContent = `peak ${fmt(downPeak)} Mbit/s`;
 
       setPhase('Upload', 'card-up');
-      const up = await measureThroughput('up', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p), down.durationMs);
+      const up = await measureThroughput('up', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p), pingDuration + down.durationMs);
       const upAvg = phaseAverage('up') ?? up.mbps;
       const upPeak = phasePeak('up');
       $('up').textContent = fmt(upAvg);
