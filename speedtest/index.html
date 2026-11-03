@@ -22,6 +22,7 @@
     --tile-border: rgba(23, 21, 31, 0.08);
     --accent: #0F6E56;
     --accent-soft: #E1F5EE;
+    --series-up: #2a78d6;
     --bad: #d6453a;
   }
   @media (prefers-color-scheme: dark) {
@@ -33,6 +34,7 @@
       --tile-border: rgba(255, 255, 255, 0.09);
       --accent: #5DCAA5;
       --accent-soft: #04342C;
+      --series-up: #3987e5;
       --bad: #ff7b6e;
     }
   }
@@ -91,6 +93,37 @@
   .message { font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 1.2em; }
   .message.error { color: var(--bad); }
 
+  .graph-card {
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-border);
+    border-radius: 16px;
+    padding: 0.85rem 0.9rem 0.6rem;
+  }
+  .graph-legend {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+  .graph-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .graph-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .graph-legend .dot-down { background: var(--accent); }
+  .graph-legend .dot-up { background: var(--series-up); }
+  #graph-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
+  #graph-svg text { font-family: inherit; fill: var(--muted); }
+  .series-down-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .series-down-area { fill: var(--accent); fill-opacity: 0.1; stroke: none; }
+  .series-up-line { fill: none; stroke: var(--series-up); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .series-up-area { fill: var(--series-up); fill-opacity: 0.1; stroke: none; }
+  .end-dot { stroke: var(--tile-bg); stroke-width: 2; opacity: 0; transition: opacity 0.15s; }
+  .end-label { font-weight: 700; opacity: 0; transition: opacity 0.15s; }
+  .grid-line { stroke: var(--tile-border); stroke-width: 1; }
+  .hover-line { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+  .hover-dot { stroke: var(--tile-bg); stroke-width: 2; opacity: 0; }
+  .hover-label { font-weight: 700; fill: var(--fg); opacity: 0; }
+
   .history h2 { margin: 0 0 0.4rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .history ol { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
   .history li { display: grid; grid-template-columns: 1.4fr 1fr 1fr 0.8fr; gap: 0.4rem; padding: 0.35rem 0; border-top: 1px solid var(--tile-border); color: var(--muted); }
@@ -111,6 +144,29 @@
       <div class="bar"><div class="bar-fill" id="bar"></div></div>
     </div>
 
+    <section class="graph-card" id="graph-card" hidden>
+      <div class="graph-legend">
+        <span><i class="dot-down"></i>Download</span>
+        <span><i class="dot-up"></i>Upload</span>
+      </div>
+      <svg id="graph-svg" viewBox="0 0 500 110" role="img" aria-label="Speed over the course of the test">
+        <line class="grid-line" id="grid-max-line" x1="0" y1="18" x2="500" y2="18" />
+        <text id="grid-max-label" x="498" y="14" text-anchor="end" font-size="9"></text>
+        <line class="grid-line" x1="0" y1="96" x2="500" y2="96" />
+        <path class="series-down-area" id="area-down" d="" />
+        <path class="series-up-area" id="area-up" d="" />
+        <path class="series-down-line" id="line-down" d="" />
+        <path class="series-up-line" id="line-up" d="" />
+        <circle class="end-dot" id="end-down" r="4" fill="var(--accent)" />
+        <circle class="end-dot" id="end-up" r="4" fill="var(--series-up)" />
+        <text class="end-label" id="end-down-label" font-size="9" fill="var(--accent)"></text>
+        <text class="end-label" id="end-up-label" font-size="9" fill="var(--series-up)"></text>
+        <line class="hover-line" id="hover-line" y1="18" y2="96" />
+        <circle class="hover-dot" id="hover-dot" r="4" />
+        <text class="hover-label" id="hover-label" font-size="9" text-anchor="middle"></text>
+      </svg>
+    </section>
+
     <div class="stats">
       <div class="stat" id="card-ping">
         <div class="stat-label">Ping</div>
@@ -118,14 +174,14 @@
         <div class="stat-sub" id="jitter"></div>
       </div>
       <div class="stat" id="card-down">
-        <div class="stat-label">Download</div>
+        <div class="stat-label">Avg download</div>
         <div class="stat-value" id="down">–</div>
-        <div class="stat-sub">Mbit/s</div>
+        <div class="stat-sub" id="down-sub">Mbit/s</div>
       </div>
       <div class="stat" id="card-up">
-        <div class="stat-label">Upload</div>
+        <div class="stat-label">Avg upload</div>
         <div class="stat-value" id="up">–</div>
-        <div class="stat-sub">Mbit/s</div>
+        <div class="stat-sub" id="up-sub">Mbit/s</div>
       </div>
     </div>
 
@@ -183,18 +239,24 @@
   }
 
   // ---- Throughput: several streams in parallel for a fixed time; bytes counted live.
-  async function measureThroughput(kind, onUpdate) {
+  async function measureThroughput(kind, onUpdate, offsetMs = 0) {
     const seconds = kind === 'down' ? DOWN_SECONDS : UP_SECONDS;
     const cap = kind === 'down' ? DOWN_CAP : UP_CAP;
     let bytes = 0;
     const controller = new AbortController();
     const start = performance.now();
     let warmBytes = 0, warmTime = null;
+    let sampleBytes = 0, sampleTime = 0;
 
     const done = () => performance.now() - start > seconds * 1000 || bytes >= cap;
     const tick = setInterval(() => {
       const t = performance.now() - start;
       if (warmTime === null && t > WARMUP_MS) { warmTime = t; warmBytes = bytes; }
+      const dt = t - sampleTime;
+      if (dt > 0) {
+        addSample(kind, offsetMs + t, t, (bytes - sampleBytes) * 8 / dt / 1000);
+        sampleBytes = bytes; sampleTime = t;
+      }
       onUpdate(currentMbps(), t / (seconds * 1000));
       if (done()) controller.abort();
     }, 200);
@@ -244,7 +306,7 @@
       clearInterval(tick);
       controller.abort();
     }
-    return { mbps: currentMbps(), bytes };
+    return { mbps: currentMbps(), bytes, durationMs: performance.now() - start };
   }
 
   function randomBytes(n) {
@@ -252,6 +314,94 @@
     for (let i = 0; i < n; i += 65536) crypto.getRandomValues(buf.subarray(i, Math.min(n, i + 65536)));
     return buf;
   }
+
+  // ---- Graph: every tick above records an instantaneous-throughput sample.
+  // The average/peak stats are computed from these samples (post-warmup),
+  // not from the single final reading, and the same samples draw the chart.
+  let timeline = [];
+  let chartScale = null;
+  const GRAPH_W = 500, GRAPH_H = 110, GRAPH_PAD_L = 4, GRAPH_PAD_T = 18, GRAPH_PAD_B = 14;
+
+  function addSample(kind, tAbs, tLocal, mbps) {
+    timeline.push({ kind, t: tAbs, tLocal, mbps: Math.max(0, mbps) });
+    drawChart();
+  }
+
+  function phaseAverage(kind) {
+    const s = timeline.filter(d => d.kind === kind && d.tLocal > WARMUP_MS);
+    if (!s.length) return null;
+    return s.reduce((a, d) => a + d.mbps, 0) / s.length;
+  }
+  function phasePeak(kind) {
+    const s = timeline.filter(d => d.kind === kind);
+    return s.length ? Math.max(...s.map(d => d.mbps)) : null;
+  }
+
+  function drawChart() {
+    const innerW = GRAPH_W - GRAPH_PAD_L * 2, innerH = GRAPH_H - GRAPH_PAD_T - GRAPH_PAD_B;
+    const maxT = Math.max((DOWN_SECONDS + UP_SECONDS) * 1000, ...timeline.map(d => d.t));
+    const maxV = Math.max(10, ...timeline.map(d => d.mbps)) * 1.15;
+    const x = t => GRAPH_PAD_L + (t / maxT) * innerW;
+    const y = v => GRAPH_PAD_T + innerH - (v / maxV) * innerH;
+    chartScale = { x, y, maxT, maxV };
+
+    function render(kind, lineId, areaId, dotId, labelId) {
+      const pts = timeline.filter(d => d.kind === kind);
+      if (!pts.length) {
+        $(lineId).setAttribute('d', ''); $(areaId).setAttribute('d', '');
+        $(dotId).style.opacity = 0; $(labelId).style.opacity = 0;
+        return;
+      }
+      const line = pts.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(d.t).toFixed(1)},${y(d.mbps).toFixed(1)}`).join(' ');
+      const base = y(0);
+      $(lineId).setAttribute('d', line);
+      $(areaId).setAttribute('d', `${line} L${x(pts[pts.length - 1].t).toFixed(1)},${base} L${x(pts[0].t).toFixed(1)},${base} Z`);
+      const last = pts[pts.length - 1];
+      const cx = x(last.t), cy = y(last.mbps);
+      $(dotId).setAttribute('cx', cx); $(dotId).setAttribute('cy', cy); $(dotId).style.opacity = 1;
+      $(labelId).setAttribute('x', Math.min(GRAPH_W - 4, cx + 6));
+      $(labelId).setAttribute('y', Math.max(10, cy - 6));
+      $(labelId).setAttribute('text-anchor', cx > GRAPH_W - 50 ? 'end' : 'start');
+      $(labelId).textContent = fmt(last.mbps);
+      $(labelId).style.opacity = 1;
+    }
+    render('down', 'line-down', 'area-down', 'end-down', 'end-down-label');
+    render('up', 'line-up', 'area-up', 'end-up', 'end-up-label');
+
+    const gridV = maxV / 1.15;
+    $('grid-max-line').setAttribute('y1', y(gridV)); $('grid-max-line').setAttribute('y2', y(gridV));
+    $('grid-max-label').setAttribute('y', y(gridV) - 4);
+    $('grid-max-label').textContent = timeline.length ? `${Math.round(gridV)} Mbit/s` : '';
+  }
+
+  function onGraphMove(evt) {
+    if (!timeline.length || !chartScale) return;
+    const rect = $('graph-svg').getBoundingClientRect();
+    const px = (evt.clientX - rect.left) / rect.width * GRAPH_W;
+    const t = Math.max(0, Math.min(chartScale.maxT, (px - GRAPH_PAD_L) / (GRAPH_W - GRAPH_PAD_L * 2) * chartScale.maxT));
+    let nearest = timeline[0], bestDist = Infinity;
+    for (const d of timeline) {
+      const dist = Math.abs(d.t - t);
+      if (dist < bestDist) { bestDist = dist; nearest = d; }
+    }
+    const cx = chartScale.x(nearest.t), cy = chartScale.y(nearest.mbps);
+    $('hover-line').setAttribute('x1', cx); $('hover-line').setAttribute('x2', cx);
+    $('hover-line').style.opacity = 1;
+    $('hover-dot').setAttribute('cx', cx); $('hover-dot').setAttribute('cy', cy);
+    $('hover-dot').setAttribute('fill', nearest.kind === 'down' ? 'var(--accent)' : 'var(--series-up)');
+    $('hover-dot').style.opacity = 1;
+    $('hover-label').setAttribute('x', Math.min(GRAPH_W - 4, Math.max(4, cx)));
+    $('hover-label').setAttribute('text-anchor', cx > GRAPH_W - 100 ? 'end' : (cx < 100 ? 'start' : 'middle'));
+    $('hover-label').textContent = `${nearest.kind === 'down' ? 'Download' : 'Upload'} · ${fmt(nearest.mbps)} Mbit/s · ${(nearest.tLocal / 1000).toFixed(1)}s`;
+    $('hover-label').style.opacity = 1;
+  }
+  function onGraphLeave() {
+    $('hover-line').style.opacity = 0;
+    $('hover-dot').style.opacity = 0;
+    $('hover-label').style.opacity = 0;
+  }
+  $('graph-svg').addEventListener('pointermove', onGraphMove);
+  $('graph-svg').addEventListener('pointerleave', onGraphLeave);
 
   // ---- History (this device only)
   function loadHistory() {
@@ -281,6 +431,11 @@
     $('message').className = 'message';
     for (const id of ['ping', 'down', 'up']) $(id).textContent = '–';
     $('jitter').textContent = '';
+    $('down-sub').textContent = 'Mbit/s';
+    $('up-sub').textContent = 'Mbit/s';
+    timeline = [];
+    $('graph-card').hidden = false;
+    drawChart();
 
     try {
       setPhase('Ping', 'card-ping');
@@ -290,18 +445,24 @@
 
       setPhase('Download', 'card-down');
       const down = await measureThroughput('down', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p));
-      $('down').textContent = fmt(down.mbps);
+      const downAvg = phaseAverage('down') ?? down.mbps;
+      const downPeak = phasePeak('down');
+      $('down').textContent = fmt(downAvg);
+      if (downPeak != null) $('down-sub').textContent = `peak ${fmt(downPeak)} Mbit/s`;
 
       setPhase('Upload', 'card-up');
-      const up = await measureThroughput('up', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p));
-      $('up').textContent = fmt(up.mbps);
+      const up = await measureThroughput('up', (mbps, p) => setLive(fmt(mbps), 'Mbit/s', p), down.durationMs);
+      const upAvg = phaseAverage('up') ?? up.mbps;
+      const upPeak = phasePeak('up');
+      $('up').textContent = fmt(upAvg);
+      if (upPeak != null) $('up-sub').textContent = `peak ${fmt(upPeak)} Mbit/s`;
 
       setPhase('Done', null);
-      setLive(fmt(down.mbps), 'Mbit/s download', 1);
+      setLive(fmt(downAvg), 'Mbit/s download', 1);
       const usedMb = Math.round((down.bytes + up.bytes) / 1e6);
       $('message').textContent = `Data used: about ${usedMb} MB`;
 
-      saveHistory([{ t: Date.now(), ping, down: down.mbps, up: up.mbps }, ...loadHistory()]);
+      saveHistory([{ t: Date.now(), ping, down: downAvg, up: upAvg }, ...loadHistory()]);
       renderHistory();
     } catch (err) {
       setPhase('Stopped', null);
